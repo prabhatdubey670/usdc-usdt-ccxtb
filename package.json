@@ -1,0 +1,26 @@
+{
+  "name": "usdc-usdt-ccxtb",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "ccxt": "^4.4.37",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "lodash": "^4.17.21",
+    "node-cron": "^3.0.3",
+    "puppeteer": "^23.10.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3"
+  }
+}
