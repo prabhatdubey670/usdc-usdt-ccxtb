@@ -1,12 +1,12 @@
+import CCXTClientHandler from '../utils/ccxtClient.js';
+
 export default class TradingBot {
-  constructor(apiKey, apiSecret, io) {
+  constructor() {
     if (TradingBot.instance) {
       return TradingBot.instance;
     }
-    this.io = io;
-    this.apiKey = apiKey;
-    this.apiSecret = apiSecret;
 
+    this.ccxtClientHandler = new CCXTClientHandler();
     this.walletBalances = null;
     this.orderList = null;
     this.spotPairPrice = null;
@@ -14,9 +14,9 @@ export default class TradingBot {
     TradingBot.instance = this;
   }
 
-  static getInstance(apiKey, apiSecret) {
+  static getInstance() {
     if (!TradingBot.instance) {
-      TradingBot.instance = new TradingBot(apiKey, apiSecret);
+      TradingBot.instance = new TradingBot();
     }
     return TradingBot.instance;
   }
@@ -260,21 +260,35 @@ export default class TradingBot {
     }
   }
 
-  async placeOrder(toOrderList) {
-    try {
-      const response = await this.placeOrder(toOrderList);
-      return response;
-    } catch (error) {
-      console.error('Error placing orders:', error);
-    }
+  placeOrder(toOrderList) {
+    fetch(`/api/v3/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        toOrderList.map((order) => ({ ...order, type: 'LIMIT' }))
+      ),
+    }).then((res) => {
+      return res.json();
+    });
   }
 
-  async cancelOrder(toCancelOrderList) {
-    try {
-      const response = await this.cancelOrder(toCancelOrderList);
-      return response;
-    } catch (error) {
-      console.error('Error canceling orders:', error);
-    }
+  cancelOrder(toCancelOrderList) {
+    fetch(`/api/v3/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        toCancelOrderList.map((order) => ({
+          orderId: order.orderId,
+          symbol: order.symbol,
+          price: order.price,
+        }))
+      ),
+    }).then((res) => {
+      return res.json();
+    });
   }
 }

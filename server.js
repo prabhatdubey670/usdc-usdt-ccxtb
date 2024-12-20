@@ -5,10 +5,26 @@ import fs from 'fs';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { Server } from 'socket.io';
-import TradingBot from './controller/tradingBot.js';
+
+// import TradingBot from './controller/tradingBot.js';
+import ModelHandler from './model/modelHandler.js';
 import CCXTClientHandler from './utils/ccxtClient.js';
-const ccxtClientHandler = new CCXTClientHandler();
+import LayoutHandler from './view/layoutHandler.js';
+import TradingBot from './controller/tradingBot.js';
+
+const tradingBot = new TradingBot();
+const layoutHandler = new LayoutHandler();
+const modelHandler = ModelHandler.getInstance(tradingBot, layoutHandler);
+const ccxtClientHandler = new CCXTClientHandler(modelHandler);
+
+console.log('CCXTClientHandler initialized with modelHandler:', {
+  modelHandler: ccxtClientHandler.modelHandler,
+  exchange: {
+    id: ccxtClientHandler.exchange.id,
+    features: ccxtClientHandler.exchange.features,
+  },
+});
+
 /**
  * Server comprises of websocket connection and api routes
  */
@@ -32,32 +48,12 @@ app.use('/view', express.static(path.join(__dirname, 'view')));
 app.use('/utils', express.static(path.join(__dirname, 'utils')));
 app.use('/model', express.static(path.join(__dirname, 'model')));
 
-app.get('/', (req, res) => {
+app.get('/', () => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const server = app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
-});
-
-// Setting up websocket
-const io = new Server(server);
-const tradingBot = new TradingBot(io);
-
-io.on('connection', (socket) => {
-  console.log('A user connected');
-
-  // Listen for messages from the client
-  socket.on('clientMessage', (data) => {
-    console.log('Message from client:', data);
-    // You can send a response back to the client
-    socket.emit('serverMessage', { message: 'Hello from server!' });
-  });
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('User  disconnected');
-  });
 });
 
 app.get('/api/getAccount', async (req, res) => {
@@ -74,7 +70,7 @@ app.get('/api/getAccount', async (req, res) => {
 
 app.get('/api/order', async (req, res) => {
   try {
-    const openOrders = await binance.fetchOpenOrders();
+    const openOrders = await ccxtClientHandler.openOrders();
     res.send(openOrders);
   } catch (error) {
     console.error('Error fetching open orders:', error);
@@ -83,111 +79,17 @@ app.get('/api/order', async (req, res) => {
 
 app.post('/api/v3/cancel', async (req, res) => {
   const toCancelOrderList = req.body;
-  let toBreak = false;
-  let keysList = {};
-  try {
-    for (let i = 0; i < toCancelOrderList.length; i++) {
-      if (toBreak) {
-        break;
-      }
-
-      const { orderId, symbol, price } = toCancelOrderList[i];
-
-      keysList[price] = keysList[price] ? price + keysList[price] : price;
-
-      const cancelOrder = await binance.cancelOrder(orderId, symbol);
-      if (cancelOrder) {
-        console.log(`Cancel Order Done: ${price} - ${orderId}`);
-      } else {
-        console.error(`Cancel Order Error: ${orderId}`);
-        toBreak = true;
-      }
-    }
-  } catch (error) {
-    console.error(`Error 1:`, error);
-  }
-
-  if (toBreak) {
-    console.error(
-      `Cancel Order error client: ${Object.entries(keysList)
-        .map((value) => `${value[0]} - ${value[1]}`)
-        .join(', ')} - ${new Date().toLocaleString()}`
-    );
-    res.send('error');
-  } else {
-    console.warn(
-      `Cancel Order success client: ${Object.keys(keysList).join(
-        ', '
-      )} - ${new Date().toLocaleString()}`
-    );
-    res.send('success');
-  }
+  const cancelOrder = await ccxtClientHandler.cancelOrder(toCancelOrderList);
+  res.send(cancelOrder);
+  console.log('camcelhogya');
 });
 
 app.post('/api/v3/order', async (req, res) => {
   const toOrderList = req.body;
-  let toBreak = false;
-  let lessOneTotal = 0;
-
-  try {
-    for (let i = 0; i < toOrderList.length; i++) {
-      if (toBreak) {
-        break;
-      }
-      const { symbol, side, type, quantity, price } = toOrderList[i];
-      if (quantity * price >= 1) {
-        console.log(
-          `Place order: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}`
-        );
-
-        const createOrder = await binance.createOrder(
-          symbol,
-          type,
-          side,
-          quantity,
-          price
-        );
-        if (createOrder) {
-          console.log(
-            `Place Order Done: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}`
-          );
-        } else {
-          console.error(
-            `Place Order Error: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}:`,
-            error
-          );
-          if (
-            error?.response?.data?.code === 30005 ||
-            error?.response?.data?.code === 30004
-          ) {
-            toBreak = true;
-          }
-        }
-      } else {
-        lessOneTotal += quantity * price;
-      }
-    }
-  } catch (error) {
-    console.error(`Error 2:`, error);
-  }
-
-  if (toBreak) {
-    console.error(`response error client: ${new Date().toLocaleString()}`);
-
-    res.send('error');
-  } else {
-    console.log(
-      `response success client: ${lessOneTotal} - ${new Date().toLocaleString()}`
-    );
-
-    res.send('success');
-  }
+  const order = await ccxtClientHandler.createOrder(toOrderList);
+  res.send(order);
+  console.log('OrderHogay');
 });
-
-// app.post("/test", (req, res) => {
-//   console.log(req.body);
-//   res.send("POST request to the homepage");
-// });
 
 async function startBrowser() {
   // launches a browser instance

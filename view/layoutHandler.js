@@ -1,5 +1,4 @@
-const socket = io();
-export class LayoutHandler {
+export default class LayoutHandler {
   constructor() {}
 
   static getInstance() {
@@ -185,5 +184,3 @@ export class LayoutHandler {
         : parseFloat(pairBalance.locked).toFixed(4);
   }
 }
-
-exports.layoutHandler = LayoutHandler.getInstance();

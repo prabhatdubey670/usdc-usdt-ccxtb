@@ -53,23 +53,12 @@
         <span id="listenKeyId" class="listen-key">Wait to link ws</span>
       </div> -->
       <script src="https://cdn.jsdelivr.net/npm/lodash.debounce@4.0.8/index.min.js"></script>
-      <script src="/socket.io/socket.io.js"></script>
-      <script>
-        const socket = io();
-        const tradingPairId = document.getElementById('tradingPairId');
-        socket.emit('messagefromClient',{message:tradingPairId.innerText})
-        // Send a message to the server
-        socket.emit('clientMessage', { message: 'Hello from client!' });
-        
-        // Listen for messages from the server
-        socket.on('serverMessage', (data) => {
-          console.log('Message from server:', data.message);
-        });
-      </script>
-      <!-- <script src="/utils/webSocket.js"  type="module"></script>
-    <script src="/controller/tradingBot.js" type="module" ></script>
-    <script src="/model/modelHandler.js" type="module"></script>
-    <script src="/view/layoutHandler.js" type="module"></script>
-    <script src="/view/viewHandler.js"  type="module"></script> -->
+
+   
+      <!-- <script src="/utils/webSocket.js"  type="module"></script> -->
+    <!-- <script src="/controller/tradingBot.js" type="module" ></script> -->
+    <!-- <script src="/model/modelHandler.js" type="module"></script> -->
+    <!-- <script src="/view/layoutHandler.js" type="module"></script> -->
+    <script src="./viewHandler.js"  type="module"></script>
   </body>
 </html>

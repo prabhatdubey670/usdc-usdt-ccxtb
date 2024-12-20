@@ -1,16 +1,20 @@
 import ccxt from 'ccxt';
 import { pro as ccxtpro } from 'ccxt';
 import dotenv from 'dotenv';
-// import debounce from 'lodash';
-import ModelHandler from '../model/modelHandler.js';
+import debounce from 'lodash';
+
 dotenv.config();
 
 export default class CCXTClientHandler {
-  constructor() {
-    console.log('Running ur codebase');
-    if (CCXTClientHandler.instance) {
-      return CCXTClientHandler.instance;
+  constructor(modelHandler) {
+    console.log('Initializing CCXTClientHandler');
+    if (!modelHandler || typeof modelHandler.setWalletBalances !== 'function') {
+      console.error(
+        "modelHandler or its method 'setWalletBalances' is not defined."
+      );
+      return;
     }
+
     this.exchange = new ccxt.binance({
       apiKey: process.env.TEST_API_KEY,
       secret: process.env.TEST_SECRET_KEY,
@@ -21,17 +25,13 @@ export default class CCXTClientHandler {
     });
     this.exchange.setSandboxMode(true);
     this.wsexchange.setSandboxMode(true);
-    this.subscribeSpotPairList = [];
-    this.getAccountBalances = this.getAccountBalances;
-    this.openOrders = this.openOrders;
-    this.cancelOrder = this.cancelOrder;
-    this.createOrder = this.createOrder;
-    this.publicOrderBook = this.publicOrderBook;
-    this.getMyTrades = this.getMyTrades;
 
-    CCXTClientHandler.instance = this;
-    this.modelHandler = new ModelHandler.getInstance();
-    this.modelHandler.setWalletBalances(this.getAccountBalances);
+    this.modelHandler = modelHandler;
+
+    // Example usage
+    this.getAccountBalances().then((balances) => {
+      this.modelHandler.setWalletBalances(balances, []);
+    });
   }
 
   static getInstance() {
@@ -49,13 +49,20 @@ export default class CCXTClientHandler {
       });
     }
   }
-
+  async openOrders() {
+    try {
+      const openOrders = await binance.fetchOpenOrders();
+      return openOrders;
+    } catch (error) {
+      console.error('Error fetching open orders:', error);
+    }
+  }
   async publicOrderBook(symbol) {
     while (true) {
       try {
         const data = await this.wsbinance.watchOrderBook(symbol);
         const { bids: buyList, asks: sellList } = data;
-        await ModelHandler.setSpotPairPrice({
+        modelHandler.setSpotPairPrice({
           key: pair,
           spotPairPrice: { buyList, sellList },
         });
@@ -109,17 +116,113 @@ export default class CCXTClientHandler {
       this.subscribeSpotPairList.push(symbol);
     }
   }
+  async createOrder(toOrderList) {
+    let toBreak = false;
+    let lessOneTotal = 0;
+
+    try {
+      for (let i = 0; i < toOrderList.length; i++) {
+        if (toBreak) {
+          break;
+        }
+        const { symbol, side, type, quantity, price } = toOrderList[i];
+        if (quantity * price >= 1) {
+          console.log(
+            `Place order: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}`
+          );
+
+          const createOrder = await binance.createOrder(
+            symbol,
+            type,
+            side,
+            quantity,
+            price
+          );
+          if (createOrder) {
+            console.log(
+              `Place Order Done: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}`
+            );
+          } else {
+            console.error(
+              `Place Order Error: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}:`,
+              error
+            );
+            if (
+              error?.response?.data?.code === 30005 ||
+              error?.response?.data?.code === 30004
+            ) {
+              toBreak = true;
+            }
+          }
+        } else {
+          lessOneTotal += quantity * price;
+        }
+      }
+    } catch (error) {
+      console.error(`Error 2:`, error);
+    }
+
+    if (toBreak) {
+      console.error(`response error client: ${new Date().toLocaleString()}`);
+    } else {
+      console.log(
+        `response success client: ${lessOneTotal} - ${new Date().toLocaleString()}`
+      );
+    }
+  }
+  async cancelOrder(toCancelOrderList) {
+    let toBreak = false;
+    let keysList = {};
+    try {
+      for (let i = 0; i < toCancelOrderList.length; i++) {
+        if (toBreak) {
+          break;
+        }
+
+        const { orderId, symbol, price } = toCancelOrderList[i];
+
+        keysList[price] = keysList[price] ? price + keysList[price] : price;
+
+        const cancelOrder = await binance.cancelOrder(orderId, symbol);
+        if (cancelOrder) {
+          console.log(`Cancel Order Done: ${price} - ${orderId}`);
+        } else {
+          console.error(`Cancel Order Error: ${orderId}`);
+          toBreak = true;
+        }
+      }
+    } catch (error) {
+      console.error(`Error 1:`, error);
+    }
+
+    if (toBreak) {
+      console.error(
+        `Cancel Order error client: ${Object.entries(keysList)
+          .map((value) => `${value[0]} - ${value[1]}`)
+          .join(', ')} - ${new Date().toLocaleString()}`
+      );
+      res.send('error');
+    } else {
+      console.warn(
+        `Cancel Order success client: ${Object.keys(keysList).join(
+          ', '
+        )} - ${new Date().toLocaleString()}`
+      );
+      res.send('success');
+    }
+  }
 }
-const spotPrivateHandler = debounce(async () => {
-  const result = await fetch('/api/getAccount').then((res) => {
-    return res.json();
-  });
+// const spotPrivateHandler = debounce(async () => {
+//   const result = await fetch('/api/getAccount').then((res) => {
+//     return res.json();
+//   });
 
-  const orderResult = await fetch(
-    `/api/order?symbol=${ModelHandler.activeSpotPair}`
-  ).then((res) => {
-    return res.json();
-  });
+//   const orderResult = await fetch(
+//     `/api/order?symbol=${modelHandler.activeSpotPair}`
+//   ).then((res) => {
+//     return res.json();
+//   });
 
-  modelHandler.setWalletBalances(result, orderResult);
-}, 100);
+//   modelHandler.setWalletBalances(result, orderResult);
+// }, 100);
+// spotPrivateHandler();

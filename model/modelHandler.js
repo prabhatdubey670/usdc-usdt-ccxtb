@@ -1,38 +1,40 @@
+import LayoutHandler from '../view/layoutHandler.js';
+import TradingBot from '../controller/tradingBot.js';
+
 export default class ModelHandler {
-  constructor() {
+  constructor(tradingBot, layoutHandler) {
+    console.log('Initializing ModelHandler');
+    this.tradingBot = tradingBot || new TradingBot();
+    this.layoutHandler = layoutHandler || new LayoutHandler();
     this.activeSpotPair = null;
     this.spotPairPrice = {};
     this.orderList = { sell: {}, buy: {} };
     this.walletBalances = {};
   }
 
-  static getInstance() {
+  static getInstance(tradingBot, layoutHandler) {
     if (!ModelHandler.instance) {
-      ModelHandler.instance = new ModelHandler();
+      ModelHandler.instance = new ModelHandler(tradingBot, layoutHandler);
     }
     return ModelHandler.instance;
   }
 
   setActiveSpotPair(spotPair) {
     this.activeSpotPair = spotPair;
-
-    layoutHandler.updateActiveSpotPair(spotPair);
+    this.layoutHandler.updateActiveSpotPair(spotPair); // Fixed reference
   }
 
   setSubscribeSpotPair({ spotPair }) {
     this.spotPairPrice[spotPair] = {};
-
-    layoutHandler.updateSpotPairTab({
+    this.layoutHandler.updateSpotPairTab({
       spotPairKeyList: Object.keys(this.spotPairPrice),
     });
-
     this.setActiveSpotPair(spotPair);
   }
 
   setSpotPairPrice({ key, spotPairPrice }) {
     if (this.spotPairPrice[key]) {
       this.spotPairPrice[key] = spotPairPrice;
-      // layoutHandler.updateSpotPairPrice({ spotPairPrice });
     } else {
       console.log('Spot pair not found');
     }
@@ -40,8 +42,8 @@ export default class ModelHandler {
 
   setWalletBalances(walletBalances, orderResult) {
     const { balances } = walletBalances;
-
-    const activePair = this.activeSpotPair.replace('USDT', '');
+    // const activePair = this.activeSpotPair.replace('USDT', '');
+    const activePair = 'USDC';
     const usdtBalance = balances.find((balance) => balance.asset === 'USDT');
     const pairBalance = balances.find(
       (balance) => balance.asset === activePair
@@ -51,9 +53,8 @@ export default class ModelHandler {
       parseFloat(usdtBalance?.free || 0) + parseFloat(usdtBalance?.locked || 0);
     const pairTotal =
       parseFloat(pairBalance?.free || 0) + parseFloat(pairBalance?.locked || 0);
-    console.log('usdtTotal', usdtTotal);
-    console.log('pairTotal', pairTotal);
-    let total = usdtTotal + pairTotal;
+
+    const total = usdtTotal + pairTotal;
     this.walletBalances = {
       usdtBalance: {
         ...usdtBalance,
@@ -69,8 +70,8 @@ export default class ModelHandler {
       },
     };
 
-    let buyOrderList = {};
-    let sellOrderList = {};
+    const buyOrderList = {};
+    const sellOrderList = {};
 
     orderResult.forEach((orderList) => {
       if (orderList.side === 'BUY') {
@@ -86,13 +87,12 @@ export default class ModelHandler {
       }
     });
 
-    this.orderList = {
-      buy: buyOrderList,
-      sell: sellOrderList,
-    };
-
-    layoutHandler.updateWalletBalances(this.walletBalances, this.orderList);
-    tradingBot.updateWalletOrderList(
+    this.orderList = { buy: buyOrderList, sell: sellOrderList };
+    this.layoutHandler.updateWalletBalances(
+      this.walletBalances,
+      this.orderList
+    );
+    this.tradingBot.updateWalletOrderList(
       this.walletBalances,
       this.orderList,
       this.spotPairPrice
