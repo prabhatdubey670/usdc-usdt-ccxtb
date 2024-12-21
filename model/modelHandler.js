@@ -1,12 +1,6 @@
-import LayoutHandler from '../view/layoutHandler.js';
-import TradingBot from '../controller/tradingBot.js';
-
 export default class ModelHandler {
   constructor(tradingBot, layoutHandler) {
-    console.log('Initializing ModelHandler');
-    this.tradingBot = tradingBot || new TradingBot();
-    this.layoutHandler = layoutHandler || new LayoutHandler();
-    this.activeSpotPair = null;
+    this.activeSpotPair = 'USDC/USDT';
     this.spotPairPrice = {};
     this.orderList = { sell: {}, buy: {} };
     this.walletBalances = {};
@@ -41,13 +35,19 @@ export default class ModelHandler {
   }
 
   setWalletBalances(walletBalances, orderResult) {
-    const { balances } = walletBalances;
-    // const activePair = this.activeSpotPair.replace('USDT', '');
+    if (!walletBalances || !walletBalances.total) {
+      console.error('Invalid wallet balance data received:', walletBalances);
+      console.log(walletBalances.total);
+      return;
+    }
+
+    const { total: balances } = walletBalances;
+    // console.log('Balances:', balances); // Log the 'total' section of balances
+
     const activePair = 'USDC';
-    const usdtBalance = balances.find((balance) => balance.asset === 'USDT');
-    const pairBalance = balances.find(
-      (balance) => balance.asset === activePair
-    );
+
+    const usdtBalance = balances.USDT || { free: 0, locked: 0 };
+    const pairBalance = balances[activePair] || { free: 0, locked: 0 };
 
     const usdtTotal =
       parseFloat(usdtBalance?.free || 0) + parseFloat(usdtBalance?.locked || 0);
@@ -55,6 +55,7 @@ export default class ModelHandler {
       parseFloat(pairBalance?.free || 0) + parseFloat(pairBalance?.locked || 0);
 
     const total = usdtTotal + pairTotal;
+
     this.walletBalances = {
       usdtBalance: {
         ...usdtBalance,
@@ -72,7 +73,12 @@ export default class ModelHandler {
 
     const buyOrderList = {};
     const sellOrderList = {};
-
+    if (!Array.isArray(orderResult)) {
+      console.warn(
+        'Invalid orderResult received. Defaulting to an empty array.'
+      );
+      orderResult = [];
+    }
     orderResult.forEach((orderList) => {
       if (orderList.side === 'BUY') {
         if (!buyOrderList[orderList.price]) {
@@ -88,6 +94,7 @@ export default class ModelHandler {
     });
 
     this.orderList = { buy: buyOrderList, sell: sellOrderList };
+
     this.layoutHandler.updateWalletBalances(
       this.walletBalances,
       this.orderList

@@ -5,144 +5,111 @@ import fs from 'fs';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-
-// import TradingBot from './controller/tradingBot.js';
-import ModelHandler from './model/modelHandler.js';
+import { Server } from 'socket.io';
 import CCXTClientHandler from './utils/ccxtClient.js';
-import LayoutHandler from './view/layoutHandler.js';
-import TradingBot from './controller/tradingBot.js';
-
-const tradingBot = new TradingBot();
-const layoutHandler = new LayoutHandler();
-const modelHandler = ModelHandler.getInstance(tradingBot, layoutHandler);
+import ModelHandler from './model/modelHandler.js';
+const modelHandler = new ModelHandler();
 const ccxtClientHandler = new CCXTClientHandler(modelHandler);
-
-console.log('CCXTClientHandler initialized with modelHandler:', {
-  modelHandler: ccxtClientHandler.modelHandler,
-  exchange: {
-    id: ccxtClientHandler.exchange.id,
-    features: ccxtClientHandler.exchange.features,
-  },
-});
-
-/**
- * Server comprises of websocket connection and api routes
- */
-
+// File and environment setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Define the log file path
 const logFilePath = path.join(__dirname, 'account_total_log.txt');
 dotenv.config();
-// Define API keys from environment variables
-const apikey = process.env.TEST_API_KEY;
-const secretkey = process.env.TEST_SECRET_KEY;
 
 const app = express();
 const port = 3010;
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/controller', express.static(path.join(__dirname, 'controller')));
-app.use('/view', express.static(path.join(__dirname, 'view')));
-app.use('/utils', express.static(path.join(__dirname, 'utils')));
-app.use('/model', express.static(path.join(__dirname, 'model')));
+app.set('view engine', 'ejs');
 
-app.get('/', () => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Define routes
+app.get('/', (req, res) => {
+  res.render('index');
 });
 
+// Start server
 const server = app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
 
-app.get('/api/getAccount', async (req, res) => {
-  while (true) {
+// Attach Socket.IO to the server
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Set up WebSocket handlers
+io.on('connection', (socket) => {
+  console.log(`Client connected: ${socket.id}`);
+
+  // Example event: Subscribe to account updates
+  socket.on('subscribeAccount', async () => {
     try {
       const accountBalances = await ccxtClientHandler.getAccountBalances();
-      res.send(accountBalances);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      socket.emit('accountData', accountBalances);
     } catch (error) {
-      console.error('Error fetching account total:', error);
+      console.error('Error fetching account balances:', error);
     }
-  }
+  });
+
+  // Example event: Fetch open orders
+  socket.on('fetchOrders', async () => {
+    try {
+      const openOrders = await ccxtClientHandler.openOrders();
+      socket.emit('orderData', openOrders);
+    } catch (error) {
+      console.error('Error fetching open orders:', error);
+    }
+  });
+
+  // Example event: Cancel orders
+  socket.on('cancelOrders', async (toCancelOrderList) => {
+    try {
+      const cancelOrder = await ccxtClientHandler.cancelOrder(
+        toCancelOrderList
+      );
+      socket.emit('cancelOrderResponse', cancelOrder);
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+    }
+  });
+
+  // Example event: Create orders
+  socket.on('createOrders', async (toOrderList) => {
+    try {
+      const order = await ccxtClientHandler.createOrder(toOrderList);
+      socket.emit('createOrderResponse', order);
+    } catch (error) {
+      console.error('Error creating order:', error);
+    }
+  });
+
+  // Disconnect event
+  socket.on('disconnect', () => {
+    console.log(`Client disconnected: ${socket.id}`);
+  });
 });
 
-app.get('/api/order', async (req, res) => {
-  try {
-    const openOrders = await ccxtClientHandler.openOrders();
-    res.send(openOrders);
-  } catch (error) {
-    console.error('Error fetching open orders:', error);
-  }
-});
-
-app.post('/api/v3/cancel', async (req, res) => {
-  const toCancelOrderList = req.body;
-  const cancelOrder = await ccxtClientHandler.cancelOrder(toCancelOrderList);
-  res.send(cancelOrder);
-  console.log('camcelhogya');
-});
-
-app.post('/api/v3/order', async (req, res) => {
-  const toOrderList = req.body;
-  const order = await ccxtClientHandler.createOrder(toOrderList);
-  res.send(order);
-  console.log('OrderHogay');
-});
-
-async function startBrowser() {
-  // launches a browser instance
-  const browser = await puppeteer.launch();
-  // creates a new page in the default browser context
-  const page = await browser.newPage();
-  // navigates to the page to be scraped
-  await page.goto('http://localhost:3010/');
-
-  setTimeout(async () => {
-    await browser.close();
-
-    startBrowser();
-  }, 1000 * 60 * 5);
-}
-
-// startBrowser();
-
-// Function to append data to a local file
+// Utility Functions
 function appendToFile(data) {
   const logEntry = `${data.accountBalances} - ${data.timestamp}\n`;
   fs.appendFileSync(logFilePath, logEntry, 'utf8');
   console.log(`Successfully saved to log file: ${logEntry}`);
 }
 
-// Schedule the task to run every day at 11:00 AM
+// Schedule daily task to fetch account balances
 cron.schedule('0 11 * * *', async () => {
   try {
-    // Assuming the total is obtained from your existing /api/getAccount endpoint
     const accountBalances = await ccxtClientHandler.getAccountBalances();
-
     const data = {
       accountBalances,
       timestamp: new Date().toLocaleString(),
     };
-
     appendToFile(data);
   } catch (error) {
     console.error('Error fetching account total:', error);
   }
 });
-
-(async () => {
-  try {
-    // Assuming the total is obtained from your existing /api/getAccount endpoint
-    const accountBalances = await ccxtClientHandler.getAccountBalances();
-    const data = {
-      accountBalances,
-      timestamp: new Date().toLocaleString(),
-    };
-
-    appendToFile(data);
-  } catch (error) {
-    console.error('Error fetching account total:', error);
-  }
-})();

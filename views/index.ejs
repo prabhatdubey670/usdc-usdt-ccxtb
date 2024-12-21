@@ -5,6 +5,7 @@
     <title>Trading Bot</title>
     <link rel="stylesheet" href="./reset.css" />
     <link rel="stylesheet" href="./index.css" />
+
   </head>
   <body class="main">
     <header class="header">
@@ -52,13 +53,34 @@
         <input type="button" value="linkWs" id="linkWsButtonId" />
         <span id="listenKeyId" class="listen-key">Wait to link ws</span>
       </div> -->
+     
       <script src="https://cdn.jsdelivr.net/npm/lodash.debounce@4.0.8/index.min.js"></script>
+      <script src="/socket.io/socket.io.js"></script>
+      <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+      <script type="module" src="./view/layoutHandler.js" ></script>
+      <script type="module" src="./view/viewHandler.js"  ></script>
+      <script>
+        const socket = io('http://localhost:3010');
 
-   
-      <!-- <script src="/utils/webSocket.js"  type="module"></script> -->
-    <!-- <script src="/controller/tradingBot.js" type="module" ></script> -->
-    <!-- <script src="/model/modelHandler.js" type="module"></script> -->
-    <!-- <script src="/view/layoutHandler.js" type="module"></script> -->
-    <script src="./viewHandler.js"  type="module"></script>
+socket.on('connect', () => {
+  console.log('Connected to server');
+
+  // Emit event to subscribe to account updates
+  socket.emit('subscribeAccount'); // Must match the server event
+
+  // Handle server response for 'accountData'
+  socket.on('accountData', (data) => {
+    console.log('Received account data:', data);
+    alert(`Account Data: ${JSON.stringify(data)}`);
+  });
+});
+
+// Handle connection error
+socket.on('connect_error', (error) => {
+  console.error('Connection failed:', error);
+});
+
+      </script>
   </body>
+
 </html>

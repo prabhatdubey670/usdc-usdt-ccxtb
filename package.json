@@ -14,11 +14,13 @@
     "axios": "^1.7.9",
     "ccxt": "^4.4.37",
     "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
     "express": "^4.21.2",
     "lodash": "^4.17.21",
     "node-cron": "^3.0.3",
     "puppeteer": "^23.10.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "vite": "^6.0.3"

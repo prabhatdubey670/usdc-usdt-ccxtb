@@ -7,7 +7,7 @@ dotenv.config();
 
 export default class CCXTClientHandler {
   constructor(modelHandler) {
-    console.log('Initializing CCXTClientHandler');
+    this.modelHandler = modelHandler;
     if (!modelHandler || typeof modelHandler.setWalletBalances !== 'function') {
       console.error(
         "modelHandler or its method 'setWalletBalances' is not defined."
@@ -26,17 +26,18 @@ export default class CCXTClientHandler {
     this.exchange.setSandboxMode(true);
     this.wsexchange.setSandboxMode(true);
 
-    this.modelHandler = modelHandler;
-
     // Example usage
-    this.getAccountBalances().then((balances) => {
-      this.modelHandler.setWalletBalances(balances, []);
-    });
+    // this.getAccountBalances().then((balances) => {
+    //   this.modelHandler.setWalletBalances(
+    //     balances.balances,
+    //     this.openOrders('USDC/USDT')
+    //   );
+    // });
   }
 
-  static getInstance() {
+  static getInstance(modelHandler) {
     if (!CCXTClientHandler.instance) {
-      CCXTClientHandler.instance = new CCXTClientHandler();
+      CCXTClientHandler.instance = new CCXTClientHandler(modelHandler);
     }
     return CCXTClientHandler.instance;
   }
@@ -49,9 +50,10 @@ export default class CCXTClientHandler {
       });
     }
   }
-  async openOrders() {
+  async openOrders(symbol) {
     try {
-      const openOrders = await binance.fetchOpenOrders();
+      const openOrders = await this.exchange.fetchOpenOrders(symbol);
+      console.log(openOrders);
       return openOrders;
     } catch (error) {
       console.error('Error fetching open orders:', error);
@@ -60,7 +62,7 @@ export default class CCXTClientHandler {
   async publicOrderBook(symbol) {
     while (true) {
       try {
-        const data = await this.wsbinance.watchOrderBook(symbol);
+        const data = await this.wsexchange.watchOrderBook(symbol);
         const { bids: buyList, asks: sellList } = data;
         modelHandler.setSpotPairPrice({
           key: pair,
@@ -74,7 +76,7 @@ export default class CCXTClientHandler {
   async getMyTrades() {
     while (true) {
       try {
-        const data = await this.wsbinance.watchTrades();
+        const data = await this.wsexchange.watchTrades();
         console.log('Spot private deals event:', data);
       } catch (e) {
         console.log(e);
@@ -84,7 +86,7 @@ export default class CCXTClientHandler {
   async getOrders() {
     while (true) {
       try {
-        const data = await this.wsbinance.watchOrders();
+        const data = await this.wsexchange.watchOrders();
         console.log('Spot private orders event:', data);
         return data;
       } catch (e) {
@@ -105,7 +107,7 @@ export default class CCXTClientHandler {
       let total = usdtTotal + pairTotal;
       console.log(`Account Total : ${total} - ${new Date().toLocaleString()}`);
       // modelHandler.setWalletBalances(result, orderResult);
-      return total;
+      return { balances, total };
     } catch (e) {
       console.log(e);
     }
@@ -131,7 +133,7 @@ export default class CCXTClientHandler {
             `Place order: ${toOrderList[i].side} - ${toOrderList[i].price} - ${toOrderList[i].quantity}`
           );
 
-          const createOrder = await binance.createOrder(
+          const createOrder = await this.exchange.createOrder(
             symbol,
             type,
             side,
@@ -183,7 +185,7 @@ export default class CCXTClientHandler {
 
         keysList[price] = keysList[price] ? price + keysList[price] : price;
 
-        const cancelOrder = await binance.cancelOrder(orderId, symbol);
+        const cancelOrder = await this.exchange.cancelOrder(orderId, symbol);
         if (cancelOrder) {
           console.log(`Cancel Order Done: ${price} - ${orderId}`);
         } else {

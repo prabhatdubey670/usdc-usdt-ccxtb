@@ -1,15 +1,14 @@
-import CCXTClientHandler from '../utils/ccxtClient.js';
-
 export default class TradingBot {
   constructor() {
     if (TradingBot.instance) {
       return TradingBot.instance;
     }
 
-    this.ccxtClientHandler = new CCXTClientHandler();
     this.walletBalances = null;
     this.orderList = null;
     this.spotPairPrice = null;
+
+    this.socket = io('http://localhost:3010'); // Adjust the URL as needed
 
     TradingBot.instance = this;
   }
@@ -261,34 +260,20 @@ export default class TradingBot {
   }
 
   placeOrder(toOrderList) {
-    fetch(`/api/v3/order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        toOrderList.map((order) => ({ ...order, type: 'LIMIT' }))
-      ),
-    }).then((res) => {
-      return res.json();
-    });
+    this.socket.emit(
+      'placeOrder',
+      toOrderList.map((order) => ({ ...order, type: 'LIMIT' }))
+    );
   }
 
   cancelOrder(toCancelOrderList) {
-    fetch(`/api/v3/cancel`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        toCancelOrderList.map((order) => ({
-          orderId: order.orderId,
-          symbol: order.symbol,
-          price: order.price,
-        }))
-      ),
-    }).then((res) => {
-      return res.json();
-    });
+    this.socket.emit(
+      'cancelOrder',
+      toCancelOrderList.map((order) => ({
+        orderId: order.orderId,
+        symbol: order.symbol,
+        price: order.price,
+      }))
+    );
   }
 }
