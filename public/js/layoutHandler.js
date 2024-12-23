@@ -1,7 +1,5 @@
 export default class LayoutHandler {
-  constructor() {
-    this.socket = io('http://localhost:3010');
-  }
+  constructor() {}
 
   static getInstance() {
     if (!LayoutHandler.instance) {
@@ -186,3 +184,4 @@ export default class LayoutHandler {
         : parseFloat(pairBalance.locked).toFixed(4);
   }
 }
+

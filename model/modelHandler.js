@@ -4,6 +4,8 @@ export default class ModelHandler {
     this.spotPairPrice = {};
     this.orderList = { sell: {}, buy: {} };
     this.walletBalances = {};
+    this.tradingBot = tradingBot;
+    this.layoutHandler = layoutHandler;
   }
 
   static getInstance(tradingBot, layoutHandler) {

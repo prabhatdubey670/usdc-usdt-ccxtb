@@ -129,16 +129,16 @@ cron.schedule('0 11 * * *', async () => {
   }
 });
 
-(async () => {
-  const browser = await puppeteer.launch({ headless: false });
-  const page = await browser.newPage();
-  await page.goto('http://localhost:3010');
-  setTimeout(async () => {
-    await browser.close();
+// (async () => {
+//   const browser = await puppeteer.launch({ headless: false });
+//   const page = await browser.newPage();
+//   await page.goto('http://localhost:3010');
+//   setTimeout(async () => {
+//     await browser.close();
 
-    startBrowser();
-  }, 1000 * 60 * 5);
-})();
+//     startBrowser();
+//   }, 1000 * 60 * 5);
+// })();
 
 // Get the account balances and save to log file
 (async () => {

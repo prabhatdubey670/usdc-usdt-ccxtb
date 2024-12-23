@@ -59,26 +59,15 @@
       <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
       <script type="module" src="/js/layoutHandler.js" ></script>
       <script type="module" src="/js/viewHandler.js"  ></script>
+      <script type="module" src="../controller/tradingBot.js"></script>
+      <script>
+         import LayoutHandler from '/js/layoutHandler.js';
+        document.addEventListener('DOMContentLoaded', () => {
+      const layoutHandler = LayoutHandler.getInstance()});
+      </script>
       <!-- <script  src="/controller/tradingBot.js"></script> -->
       <!-- <script>
-        const socket = io('http://localhost:3010');
-        const subscribeButton = document.getElementById('subscribeButtonId');
       
-        socket.on('connect', () => {
-        console.log('Connected to server');
-
-        socket.emit('subscribeAccount'); // Must match the server event
-        socket.on('accountData', (data) => {
-          console.log('Received account data:', data);
-          alert(`Account Data: ${JSON.stringify(data.total)}`);
-        });
-      });
-        subscribeButton.addEventListener('click',()=>{
-                socket.emit('')
-              })
-        socket.on('connect_error', (error) => {
-        console.error('Connection failed:', error);
-        });
 
       </script> -->
   </body>
