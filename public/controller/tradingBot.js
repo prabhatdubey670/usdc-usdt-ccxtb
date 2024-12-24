@@ -1,4 +1,3 @@
-import io from 'socket.io-client';
 export default class TradingBot {
   constructor() {
     if (TradingBot.instance) {
@@ -262,14 +261,14 @@ export default class TradingBot {
 
   placeOrder(toOrderList) {
     this.socket.emit(
-      'placeOrder',
+      'createOrders',
       toOrderList.map((order) => ({ ...order, type: 'LIMIT' }))
     );
   }
 
   cancelOrder(toCancelOrderList) {
     this.socket.emit(
-      'cancelOrder',
+      'cancelOrders',
       toCancelOrderList.map((order) => ({
         orderId: order.orderId,
         symbol: order.symbol,

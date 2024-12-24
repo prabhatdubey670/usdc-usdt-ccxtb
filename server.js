@@ -87,6 +87,7 @@ io.on('connection', (socket) => {
         toCancelOrderList
       );
       socket.emit('cancelOrderResponse', cancelOrder);
+      
     } catch (error) {
       console.error('Error cancelling order:', error);
     }

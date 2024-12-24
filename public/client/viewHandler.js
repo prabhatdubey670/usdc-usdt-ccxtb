@@ -1,6 +1,6 @@
 const socket = io('http://localhost:3010');
 const selectedPair = document.getElementById('tradingPairId').value;
-console.log(selectedPair)
+console.log(selectedPair);
 socket.on('connect', () => {
   console.log('Connected to server');
   socket.emit('subscribeSpotPair', selectedPair);
@@ -8,7 +8,13 @@ socket.on('connect', () => {
   socket.emit('subscribeAccount'); // Must match the server event
   socket.on('accountData', (data) => {
     console.log('Received account data:', data);
-    alert(`Account Data: ${JSON.stringify(data.total)}`);
+    alert(
+      `Account Data: Total - ${JSON.stringify(
+        data.total
+      )} , USDC - ${JSON.stringify(
+        data.balances.USDC.total
+      )} , USDT - ${JSON.stringify(data.balances.USDT.total)}`
+    );
   });
 });
 

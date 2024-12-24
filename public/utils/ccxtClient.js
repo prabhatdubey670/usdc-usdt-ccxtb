@@ -25,14 +25,7 @@ export default class CCXTClientHandler {
     });
     this.exchange.setSandboxMode(true);
     this.wsexchange.setSandboxMode(true);
-
-    // Example usage
-    // this.getAccountBalances().then((balances) => {
-    //   this.modelHandler.setWalletBalances(
-    //     balances.balances,
-    //     this.openOrders('USDC/USDT')
-    //   );
-    // });
+    this.subscribeSpotPairList = [];
   }
 
   static getInstance(modelHandler) {

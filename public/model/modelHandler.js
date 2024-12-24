@@ -17,14 +17,14 @@ export default class ModelHandler {
 
   setActiveSpotPair(spotPair) {
     this.activeSpotPair = spotPair;
-    this.layoutHandler.updateActiveSpotPair(spotPair); // Fixed reference
+    // this.layoutHandler.updateActiveSpotPair(spotPair); // Fixed reference
   }
 
   setSubscribeSpotPair({ spotPair }) {
     this.spotPairPrice[spotPair] = {};
-    this.layoutHandler.updateSpotPairTab({
-      spotPairKeyList: Object.keys(this.spotPairPrice),
-    });
+    // this.layoutHandler.updateSpotPairTab({
+    //   spotPairKeyList: Object.keys(this.spotPairPrice),
+    // });
     this.setActiveSpotPair(spotPair);
   }
 
@@ -97,10 +97,10 @@ export default class ModelHandler {
 
     this.orderList = { buy: buyOrderList, sell: sellOrderList };
 
-    this.layoutHandler.updateWalletBalances(
-      this.walletBalances,
-      this.orderList
-    );
+    // this.layoutHandler.updateWalletBalances(
+    //   this.walletBalances,
+    //   this.orderList
+    // );
     this.tradingBot.updateWalletOrderList(
       this.walletBalances,
       this.orderList,
